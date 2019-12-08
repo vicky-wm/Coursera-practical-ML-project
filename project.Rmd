@@ -1,0 +1,61 @@
+---
+title: "Coursera-practical-ML-project"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+library(caret)
+library(randomForest)
+
+# load data
+df = read.csv("C:/Users/mengw/Downloads/pml-training.csv",na.strings=c("NA","#DIV/0!",""))
+df1 = read.csv("C:/Users/mengw/Downloads/pml-testing.csv",na.strings=c("NA","#DIV/0!",""))
+
+```
+# clean data: delete near zero variance datadata
+```{r}
+NZV <- nearZeroVar(df, saveMetrics=TRUE)
+NZV <- NZV[NZV$nzv == 'TRUE',]
+rownames(NZV)
+df <- df[ ,-which(names(df) %in% rownames(NZV))]
+```
+# clean data: delete columns with too many NA's
+```{r}
+Mydf <- df #creating another subset to iterate in loop
+for(i in 1:length(df)) { #for every column in the training dataset
+  if( sum( is.na( df[, i] ) ) /nrow(df) >= .6 ) { #if n?? NAs > 60% of total observations
+    for(j in 1:length(Mydf)) {
+      if( length( grep(names(df[i]), names(Mydf)[j]) ) ==1)  { #if the columns are the same:
+        Mydf <- Mydf[ , -j] #Remove that column
+      }   
+    } 
+  }
+}
+df <- Mydf
+```
+# clean data: delete the first two columns which don't have any info 
+```{r}
+df <- df[-c(1,2)]
+
+```
+# separate df into training and testing 
+```{r}
+inTrain = createDataPartition(df$classe, p = 3/4)[[1]]
+training = df[ inTrain,]
+testing = df[-inTrain,]
+```
+# fit random forest
+```{r}
+mod_rf <- randomForest(classe ~. , data=training)
+predictions <- predict(mod_rf, testing, type = "class")
+confusionMatrix(predictions, testing$classe)
+# the result is pretty good
+```
+
